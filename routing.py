@@ -8,7 +8,7 @@ from wtforms import Form, TextField, PasswordField, validators
 
 from nereid import jsonify, flash, render_template, url_for, cache
 from nereid.globals import session, request
-from nereid.helpers import login_required, key_from_list, get_flashed_messages
+from nereid.helpers import login_required, key_from_list, get_flashed_messages, slugify
 from nereid.signals import login, failed_login, logout
 from trytond.model import ModelView, ModelSQL, fields
 from trytond.backend import TableHandler
@@ -18,7 +18,7 @@ from trytond.pool import Pool
 from .i18n import _
 
 __all__ = ['URLMap', 'WebSite', 'URLRule', 'URLRuleDefaults',
-           'WebsiteCountry', 'WebsiteCurrency']
+           'WebsiteCountry', 'WebsiteLocale', 'Locale']
 
 
 class URLMap(ModelSQL, ModelView):
@@ -129,15 +129,6 @@ class WebSite(ModelSQL, ModelView):
         'nereid.website-country.country', 'website', 'country',
         'Countries Available')
 
-    #: Allowed currencies in the website
-    currencies = fields.Many2Many(
-        'nereid.website-currency.currency',
-        'website', 'currency', 'Currencies Available')
-
-    #: Default language
-    default_language = fields.Many2One('ir.lang', 'Default Language',
-        required=True)
-
     #: The res.user with which the nereid application will be loaded
     #:  .. versionadded: 0.3
     application_user = fields.Many2One(
@@ -149,6 +140,12 @@ class WebSite(ModelSQL, ModelView):
 
     timezone = fields.Selection(
         [(x, x) for x in pytz.common_timezones], 'Timezone', translate=False
+    )
+    default_locale = fields.Many2One(
+        'nereid.locale', 'Default Locale', required=True,
+    )
+    locales = fields.Many2Many(
+        'nereid.website-nereid.locale', 'website', 'locales', 'Locales',
     )
 
     @staticmethod
@@ -484,14 +481,44 @@ class WebsiteCountry(ModelSQL):
     country = fields.Many2One('country.country', 'Country')
 
 
-class WebsiteCurrency(ModelSQL):
-    "Currencies to be made available on website"
-    __name__ = 'nereid.website-currency.currency'
-    _table = 'website_currency_rel'
+class Locale(ModelSQL, ModelView):
+    '''
+    Nereid Locale
 
-    website = fields.Many2One(
-        'nereid.website', 'Website',
-        ondelete='CASCADE', select=1, required=True)
-    currency = fields.Many2One(
-        'currency.currency', 'Currency',
-        ondelete='CASCADE', select=1, required=True)
+    :param code: Unique code of locale, char
+    :param language: Language of the locale, M2O lang
+    :param currency: Currency of the locale, M2O currency
+    '''
+    __name__ = 'nereid.locale'
+    _rec_name = 'code'
+
+    code = fields.Char('Code', required=True, on_change=['code'])
+    language = fields.Many2One('ir.lang', 'Language', required=True)
+    currency = fields.Many2One('currency.currency', 'Currency', required=True)
+
+    @classmethod
+    def __setup__(cls):
+        super(Locale, cls).__setup__()
+        cls._sql_constraints += [
+            ('code_uniq', 'UNIQUE(code)',
+             'Locale code must be unique!')
+        ]
+
+    def on_change_code(self):
+        '''
+        This will slugify the code and ensures that the code is URL safe.
+        '''
+        res = {}
+        if self.code:
+            res['code'] = slugify(self.code)
+        return res
+
+
+class WebsiteLocale(ModelSQL):
+    '''
+    Website Locale Relations
+    '''
+    __name__ = 'nereid.website-nereid.locale'
+
+    website = fields.Many2One('nereid.website', 'Website', select=True)
+    locales = fields.Many2One('nereid.locale', 'Locale', select=True)

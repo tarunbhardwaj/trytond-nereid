@@ -26,6 +26,7 @@ class TestCurrency(NereidTestCase):
         self.currency_obj = POOL.get('currency.currency')
         self.language_obj = POOL.get('ir.lang')
         self.party_obj = POOL.get('party.party')
+        self.locale_obj = POOL.get('nereid.locale')
 
     def setup_defaults(self):
         """
@@ -82,17 +83,22 @@ class TestCurrency(NereidTestCase):
         self.website_currencies = [c1, c2]
         url_map, = self.url_map_obj.search([], limit=1)
         self.en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        locale, = self.locale_obj.create([{
+            'code': 'en_US',
+            'language': self.en_us,
+            'currency': self.lang_currency,
+        }])
         self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map,
             'company': self.company,
             'application_user': USER,
-            'default_language': self.en_us,
+            'locales': [('add', [locale])],
+            'default_locale': locale,
             'guest_user': self.guest_user.id,
-            'currencies': [('set', self.website_currencies)],
         }])
         self.templates = {
-            'home.jinja': '{{ request.nereid_currency.id }}',
+            'home.jinja': '{{ request.nereid_locale.currency.id }}',
         }
 
     def get_template_source(self, name):
@@ -101,46 +107,22 @@ class TestCurrency(NereidTestCase):
         """
         return self.templates.get(name)
 
-    def test_0010_currency_from_company(self):
+    def test_0010_currency_from_locale(self):
         """
-        Do not set a currency for the language, and the fail over of
-        picking currency from company should work.
-        """
-        with Transaction().start(DB_NAME, USER, CONTEXT):
-            self.setup_defaults()
-            app = self.get_app()
-
-            with app.test_client() as c:
-                rv = c.get('/en_US/')
-                self.assertEqual(rv.status_code, 200)
-
-            self.assertEqual(int(rv.data), self.company.currency.id)
-
-            with app.test_request_context('/en_US/'):
-                self.assertEqual(
-                    self.currency_obj.convert(Decimal('100')), Decimal('100')
-                )
-
-
-    def test_0020_currency_from_language(self):
-        """
-        Set the currency for the language and check if the currency
+        Set the currency for the locale and check if the currency
         in the request is correct
         """
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
             app = self.get_app()
 
-            self.language_obj.write(
-                [self.en_us], {'default_currency': self.lang_currency}
-            )
             with app.test_client() as c:
-                rv = c.get('/en_US/')
+                rv = c.get('/')
                 self.assertEqual(rv.status_code, 200)
 
             self.assertEqual(int(rv.data), int(self.lang_currency))
 
-            with app.test_request_context('/en_US/'):
+            with app.test_request_context('/'):
                 self.assertEqual(
                     self.currency_obj.convert(Decimal('100')), Decimal('3000')
                 )

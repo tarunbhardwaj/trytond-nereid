@@ -46,6 +46,7 @@ class TestStaticFile(NereidTestCase):
         self.contact_mech_obj = POOL.get('party.contact_mechanism')
         self.static_file_obj = POOL.get('nereid.static.file')
         self.static_folder_obj = POOL.get('nereid.static.folder')
+        self.locale_obj = POOL.get('nereid.locale')
 
         self.templates = {
             'home.jinja':
@@ -84,12 +85,18 @@ class TestStaticFile(NereidTestCase):
 
         url_map_id, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        locale, = self.locale_obj.create([{
+            'code': 'en_US',
+            'language': en_us,
+            'currency': usd,
+        }])
         self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map_id,
             'company': self.company,
             'application_user': USER,
-            'default_language': en_us,
+            'locales': [('add', [locale])],
+            'default_locale': locale,
             'guest_user': self.guest_user,
         }])
 
@@ -123,7 +130,7 @@ class TestStaticFile(NereidTestCase):
             app = self.get_app()
 
             with app.test_client() as c:
-                rv = c.get('/en_US/static-file/test/test.png')
+                rv = c.get('/static-file/test/test.png')
                 self.assertEqual(rv.data, 'test-content')
                 self.assertEqual(rv.headers['Content-Type'], 'image/png')
                 self.assertEqual(rv.status_code, 200)
@@ -154,8 +161,8 @@ class TestStaticFile(NereidTestCase):
                 self.nereid_website_obj.home = new.instancemethod(
                     home_func, self.nereid_website_obj
                 )
-                rv = c.get('/en_US/')
-                self.assertTrue('/en_US/static-file/test/test.png' in rv.data)
+                rv = c.get('/')
+                self.assertTrue('/static-file/test/test.png' in rv.data)
                 self.assertEqual(rv.status_code, 200)
 
     def test_0030_static_file_remote_url(self):
@@ -195,7 +202,7 @@ class TestStaticFile(NereidTestCase):
                 self.nereid_website_obj.home = new.instancemethod(
                     home_func, self.nereid_website_obj
                 )
-                rv = c.get('/en_US/')
+                rv = c.get('/')
                 self.assertTrue(
                     'http://openlabs.co.in/logo.png' in rv.data
                 )

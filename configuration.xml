@@ -23,21 +23,6 @@
         <menuitem name="Configuration" sequence="10"
                   id="menu_nereid_configuration" parent="menu_nereid" />
 
-        <record model="ir.ui.view" id="lang_view_tree">
-            <field name="model">ir.lang</field>
-            <field name="type">tree</field>
-            <field name="inherit" ref="ir.lang_view_tree"/>
-            <field name="arch" type="xml">
-                <![CDATA[
-                  <data>
-                    <xpath expr="/tree/field[@name='active']" position="after">
-                        <field name="default_currency"/>
-                    </xpath>
-                  </data>
-                ]]>
-            </field>
-        </record>
-
         <!-- Routing -->
         <menuitem name="Routing" id="menu_nereid_routing"
             sequence="10" parent="menu_nereid_configuration" />
@@ -55,15 +40,18 @@
                     <field name="active" />
                     <label name="company"/>
                     <field name="company"/>
-                    <label name="default_language"/>
-                    <field name="default_language"/>
                     <label name="application_user"/>
                     <field name="application_user"/>
                     <label name="guest_user"/>
                     <field name="guest_user"/>
                     <label name="timezone"/>
                     <field name="timezone"/>
+                    <label name="default_locale"/>
+                    <field name="default_locale"/>
                     <notebook colspan="4">
+                      <page id="locales" string="Locales">
+                        <field name="locales"/>
+                      </page>
                       <page id="Countries" string="Countries">
                         <field name="countries"/>
                       </page>
@@ -71,6 +59,19 @@
                       </page>
                     </notebook>
                 </form>
+                ]]>
+            </field>
+        </record>
+        <record model="ir.ui.view" id="locale_view_tree">
+            <field name="model">nereid.locale</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <tree string="Locales">
+                    <field name="code" />
+                    <field name="language" />
+                    <field name="currency" />
+                </tree>
                 ]]>
             </field>
         </record>

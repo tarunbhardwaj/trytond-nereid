@@ -36,6 +36,7 @@ class TestAddress(NereidTestCase):
         self.party_obj = POOL.get('party.party')
         self.address_obj = POOL.get('party.address')
         self.contact_mech_obj = POOL.get('party.contact_mechanism')
+        self.locale_obj = POOL.get('nereid.locale')
 
         self.templates = {
             'home.jinja': '{{get_flashed_messages()}}',
@@ -130,12 +131,18 @@ class TestAddress(NereidTestCase):
 
         url_map_id, = self.url_map_obj.search([], limit=1)
         en_us, = self.language_obj.search([('code', '=', 'en_US')])
+        locale, = self.locale_obj.create([{
+            'code': 'en_US',
+            'language': en_us,
+            'currency': usd,
+        }])
         self.nereid_website_obj.create([{
             'name': 'localhost',
             'url_map': url_map_id,
             'company': self.company,
             'application_user': USER,
-            'default_language': en_us,
+            'locales': [('add', [locale])],
+            'default_locale': locale,
             'guest_user': self.guest_user,
             'countries': [('set', self.available_countries)],
         }])
@@ -172,7 +179,7 @@ class TestAddress(NereidTestCase):
 
             with app.test_client() as c:
                 response = c.post(
-                    '/en_US/login',
+                    '/login',
                     data={
                         'email': 'email@example.com',
                         'password': 'password',
@@ -186,7 +193,7 @@ class TestAddress(NereidTestCase):
                 existing_address, = registered_user.party.addresses
 
                 # POST and a new address must be created
-                response = c.post('/en_US/save-new-address', data=address_data)
+                response = c.post('/save-new-address', data=address_data)
                 self.assertEqual(response.status_code, 302)
 
                 # Re browse the record
@@ -237,7 +244,7 @@ class TestAddress(NereidTestCase):
 
             with app.test_client() as c:
                 response = c.post(
-                    '/en_US/login',
+                    '/login',
                     data={
                         'email': 'email@example.com',
                         'password': 'password',
@@ -251,13 +258,13 @@ class TestAddress(NereidTestCase):
                 existing_address, = registered_user.party.addresses
 
                 response = c.get(
-                    '/en_US/edit-address/%d' % existing_address.id
+                    '/edit-address/%d' % existing_address.id
                 )
                 self.assertTrue('ID:%s' % existing_address.id in response.data)
 
                 # POST to the existing address must updatethe existing address
                 response = c.post(
-                    '/en_US/edit-address/%d' % existing_address.id,
+                    '/edit-address/%d' % existing_address.id,
                     data=address_data
                 )
                 self.assertEqual(response.status_code, 302)
@@ -289,7 +296,7 @@ class TestAddress(NereidTestCase):
 
             with app.test_client() as c:
                 response = c.post(
-                    '/en_US/login',
+                    '/login',
                     data={
                         'email': 'email@example.com',
                         'password': 'password',
@@ -298,7 +305,7 @@ class TestAddress(NereidTestCase):
                 self.assertEqual(response.status_code, 302) # Login success
 
             with app.test_client() as c:
-                response = c.get('/en_US/view-address')
+                response = c.get('/view-address')
                 self.assertEqual(response.status_code, 302) # Redir to login
 
     def test_0040_country_list(self):
@@ -309,7 +316,7 @@ class TestAddress(NereidTestCase):
             self.setup_defaults()
             app = self.get_app()
             with app.test_client() as c:
-                response = c.get('/en_US/countries')
+                response = c.get('/countries')
                 self.assertEqual(response.status_code, 200) # Login success
                 self.assertEqual(len(json.loads(response.data)['result']), 5)
 
@@ -325,7 +332,7 @@ class TestAddress(NereidTestCase):
             country = self.available_countries[1]
 
             with app.test_client() as c:
-                response = c.get('/en_US/subdivisions?country=%d' % country)
+                response = c.get('/subdivisions?country=%d' % country)
                 self.assertNotEqual(
                     len(json.loads(response.data)['result']), 0
                 )

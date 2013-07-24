@@ -18,15 +18,16 @@ def register():
         Permission,
         UserPermission,
         URLMap,
+        Locale,
         WebSite,
         URLRule,
         URLRuleDefaults,
         WebsiteCountry,
-        WebsiteCurrency,
         NereidStaticFolder,
         NereidStaticFile,
         Currency,
         ContextProcessors,
         Language,
+        WebsiteLocale,
         module='nereid', type_='model'
     )
