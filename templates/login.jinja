@@ -1,0 +1,19 @@
+{% extends 'templates/home.jinja' %}
+
+{% block mainbody %}
+  <div id="mainbody">
+    <form action="{{ url_for('nereid.website.login') }}" method="POST" class="clearfix" id="login-form">
+      <fieldset>
+        <br/>
+        <em>Log in with the email</em>
+        <br/><br/>
+        <input class="required" id="email" name="email" placeholder="your login" type="text" value="">
+        <input class="required" id="password" name="password" placeholder="password" type="password" value="">
+        <div class="control-group full-width centred">
+          <div class="controls"><button type="submit" class="btn" value="">{% trans %}Log In{% endtrans %}</button></div>
+        </div>
+        <br/><br/>
+      </fieldset>
+    </form>
+  </div>
+{% endblock %}
